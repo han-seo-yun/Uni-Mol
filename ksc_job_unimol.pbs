@@ -1,7 +1,7 @@
 #!/bin/bash
 #PBS -N unimol_pretrain
-#PBS -q <GPU_QUEUE_NAME>            # TODO: qstat -Q 로 확인한 실제 GPU 큐 이름으로 교체
-#PBS -l select=1:ncpus=8:ngpus=4     # multi-GPU pretrain 예시 (필요 GPU 수에 맞춰 조정)
+#PBS -q amd_a100_4                  # qstat -Q 확인됨 (2026-08-13). A100 4장 노드 -- 3D 분자 pretrain은 V100보다 메모리 여유있는 A100 권장
+#PBS -l select=1:ncpus=32:ngpus=4    # TODO: qstat -Qf amd_a100_4 로 노드당 ncpus/ngpus 비율, 최대 walltime 확인 후 조정
 #PBS -l walltime=24:00:00
 #PBS -j oe
 #PBS -o unimol_pretrain.log
