@@ -1,0 +1,43 @@
+#!/bin/bash
+#PBS -N unimol_pretrain
+#PBS -q <GPU_QUEUE_NAME>            # TODO: qstat -Q 로 확인한 실제 GPU 큐 이름으로 교체
+#PBS -l select=1:ncpus=8:ngpus=4     # multi-GPU pretrain 예시 (필요 GPU 수에 맞춰 조정)
+#PBS -l walltime=24:00:00
+#PBS -j oe
+#PBS -o unimol_pretrain.log
+
+set -euo pipefail
+cd "$PBS_O_WORKDIR"
+
+# 1) CUDA 모듈 로드
+#    torch 버전과 반드시 일치해야 함 (install.sh ksc 참고). README 기준
+#    예시는 cuda/11.3 + torch==1.11.0+cu113 조합이지만, 더 최신 조합도 됨 --
+#    중요한 건 "module load한 CUDA == torch가 빌드된 CUDA" 일치.
+module load cuda/11.3
+
+source "$(conda info --base)/etc/profile.d/conda.sh"
+conda activate unimol
+
+# 2) GPU 인식 확인
+python -c "import torch; print('CUDA available:', torch.cuda.is_available(), torch.cuda.device_count(), 'GPUs')"
+
+# 3) Uni-Core가 --enable-cuda-ext 로 빌드됐는지 재확인 (로컬 CPU 빌드를 그대로
+#    가져왔다면 여기서 다시 빌드해야 함 -- install.sh ksc 단계 5 참고)
+python -c "
+import unicore
+print('unicore imported OK -- verify fused kernels were built with CUDA_HOME =', __import__('os').environ.get('CUDA_HOME'))
+"
+
+# 4) 실제 pretrain (n_gpu, data_path, --user-dir 등은 README.md 의 실제 예시로 교체)
+n_gpu=4
+data_path=/path/to/unimol/pretrain/data   # TODO: 실제 데이터 경로로 교체
+
+python -m torch.distributed.launch --nproc_per_node=$n_gpu \
+  "$(which unicore-train)" "$data_path" \
+  --user-dir ./unimol \
+  --train-subset train --valid-subset valid \
+  --num-workers 8 --ddp-backend=c10d \
+  --task unimol --loss unimol --arch unimol_base \
+  --fp16 \
+  --save-dir ./checkpoints \
+  --tensorboard-logdir ./tsb
