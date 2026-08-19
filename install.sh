@@ -50,20 +50,33 @@ elif [ "$MODE" = "ksc" ]; then
   cat <<'EOF'
 == KSC (GPU cluster) install steps — derived from README.md ==
 
-1. Load CUDA module (check exact version available on KSC first):
+0. *** IMPORTANT: upstream's cuda11.3 + torch 1.11 combo is NOT available on KSC. ***
+   `module avail cuda` on KSC (glogin01, checked 2026-08-13) lists only:
+     cuda/12.1 12.2 12.3 12.4 12.4.1 12.5 12.8 12.9 12.9.1 13.0.2
+   No CUDA 11.x module exists, so the README's pytorch1.11.0-cuda11.3 docker
+   recipe cannot be reproduced. Use CUDA 12.1 + a cu121 torch build instead.
+
+1. Load CUDA module:
      module avail cuda
-     module load cuda/11.3     # match to a PyTorch build below, e.g. cu113
+     module load cuda/12.1
+     echo "$CUDA_HOME"          # must be set; Uni-Core's setup.py reads it
 
 2. Create conda env:
      conda create -n unimol python=3.10 -y
      conda activate unimol
 
-3. Install PyTorch matching the loaded CUDA version (README docker image
-   uses pytorch1.11.0-cuda11.3; newer CUDA/PyTorch combos likely also work,
-   but keep torch's CUDA version == `module load`ed CUDA version):
-     pip install torch==1.11.0+cu113 -f https://download.pytorch.org/whl/torch_stable.html
-     # or a newer matching pair, e.g. torch==2.x with cu118/cu121, if that's
-     # what KSC provides.
+3. Install PyTorch built against the SAME CUDA version you just loaded (cu121).
+   Do this on the LOGIN node -- compute nodes may have no outbound network:
+     pip install torch --index-url https://download.pytorch.org/whl/cu121
+     python -c "import torch; print(torch.__version__, torch.version.cuda)"
+     # torch.version.cuda must print 12.1 -- if it prints anything else,
+     # step 5 (Uni-Core --enable-cuda-ext) will fail the version check.
+   # NOTE: Uni-Core is an older fairseq-style codebase. If it fails to compile
+   # against a very recent torch, pin an older cu121 torch (e.g. torch==2.1.2)
+   # rather than switching CUDA versions -- 11.x is not an option here.
+   # Alternative: KSC also ships a prebuilt env module,
+   # `module load conda/pytorch_2.9.1_cuda12`, if you'd rather not build torch
+   # yourself -- but then Uni-Core must be compiled against that torch.
 
 4. Install rdkit (pinned per unimol/README.md):
      pip install rdkit-pypi==2022.9.3

@@ -10,10 +10,13 @@ set -euo pipefail
 cd "$PBS_O_WORKDIR"
 
 # 1) CUDA 모듈 로드
-#    torch 버전과 반드시 일치해야 함 (install.sh ksc 참고). README 기준
-#    예시는 cuda/11.3 + torch==1.11.0+cu113 조합이지만, 더 최신 조합도 됨 --
-#    중요한 건 "module load한 CUDA == torch가 빌드된 CUDA" 일치.
-module load cuda/11.3
+#    *** upstream README의 cuda/11.3 + torch==1.11.0+cu113 조합은 KSC에서 불가능하다. ***
+#    module avail cuda 확인 결과(2026-08-13) KSC에는 12.1 ~ 13.0.2 만 있고 11.x 모듈이 없다.
+#    따라서 cuda/12.1 + torch cu121 빌드 조합으로 올린다.
+#    핵심 규칙은 그대로다: "module load한 CUDA major/minor == torch가 빌드된 CUDA".
+#    Uni-Core를 --enable-cuda-ext 로 빌드할 때 setup.py가 이 둘을 비교해서
+#    어긋나면 에러를 낸다.
+module load cuda/12.1
 
 source "$(conda info --base)/etc/profile.d/conda.sh"
 conda activate unimol
