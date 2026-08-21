@@ -1,13 +1,25 @@
 #!/bin/bash
-#PBS -N unimol_pretrain
-#PBS -q amd_a100_4                  # qstat -Q 확인됨 (2026-08-13). A100 4장 노드 -- 3D 분자 pretrain은 V100보다 메모리 여유있는 A100 권장
-#PBS -l select=1:ncpus=32:ngpus=4    # TODO: qstat -Qf amd_a100_4 로 노드당 ncpus/ngpus 비율, 최대 walltime 확인 후 조정
-#PBS -l walltime=24:00:00
-#PBS -j oe
-#PBS -o unimol_pretrain.log
+# =============================================================================
+# 이 시스템(KISTI Neuron)은 순수 Slurm이다. `qsub`는 sbatch를 그대로 호출만
+# 하고 `#PBS` 지시어는 해석하지 않으므로(그냥 주석으로 무시됨) `#SBATCH`로 쓴다.
+# (showappl 확인, 2026-08-21: --comment="field=<field>;appl=<program>" 필수)
+# =============================================================================
+#SBATCH --job-name=unimol_pretrain
+#SBATCH --partition=amd_a100_4
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=32
+#SBATCH --gres=gpu:4
+#SBATCH --time=24:00:00
+#SBATCH --output=unimol_pretrain.log
+#SBATCH --error=unimol_pretrain.log
+#SBATCH --comment="field=chem;appl=pytorch"
+
+# ↓ qsub가 "Account" 관련 에러로 거부되면 아래 주석을 풀고 본인 계정값 채울 것.
+##SBATCH --account=etc
 
 set -euo pipefail
-cd "$PBS_O_WORKDIR"
+cd "$SLURM_SUBMIT_DIR"
 
 # 1) CUDA 모듈 로드
 #    *** upstream README의 cuda/11.3 + torch==1.11.0+cu113 조합은 KSC에서 불가능하다. ***
@@ -32,6 +44,7 @@ print('unicore imported OK -- verify fused kernels were built with CUDA_HOME =',
 "
 
 # 4) 실제 pretrain (n_gpu, data_path, --user-dir 등은 README.md 의 실제 예시로 교체)
+#    *** data_path 는 아직 placeholder다. 실제 사전학습 데이터 경로로 반드시 교체할 것. ***
 n_gpu=4
 data_path=/path/to/unimol/pretrain/data   # TODO: 실제 데이터 경로로 교체
 
