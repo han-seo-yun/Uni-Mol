@@ -127,3 +127,11 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# KSC unimol_smoketest.py 실행 산물
+unimol_smoketest_toy_data.csv
+unimol_smoketest_exp/
+*.pbs.o*
+*.pbs.e*
+*_smoketest.log
+*_pretrain.log
