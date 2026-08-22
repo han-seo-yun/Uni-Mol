@@ -12,7 +12,7 @@
 # 원본 Uni-Core 명령으로 교체할 것.
 #
 # 사전 준비 (로그인 노드에서 1회):
-#   module load conda/pytorch_2.9.1_cuda12
+#   source /apps/applications/Miniconda/25.11.1/etc/profile.d/conda.sh
 #   conda create -p /scratch/$USER/envs/unimol_tools python=3.10 -y
 #   conda activate /scratch/$USER/envs/unimol_tools
 #   pip install unimol_tools huggingface_hub torch
@@ -43,9 +43,13 @@ HF_CACHE="${HF_CACHE:-/scratch/$USER/hf_cache}"
 # ---------------------------------------------------------------------------
 
 # 1) conda 활성화
-#    *** 계산 노드에는 conda가 기본 PATH에 없다 (smoke test 확인, 2026-08-22). ***
-module load conda/pytorch_2.9.1_cuda12
-source "$(conda info --base)/etc/profile.d/conda.sh"
+#    *** `module load conda/pytorch_2.9.1_cuda12`는 conda 도구 자체가 아니라
+#    미리 만들어진 특정 환경의 bin/만 PATH에 얹어준다 -- conda 명령이 없다
+#    (2026-08-22 실제 확인: "conda: command not found"). conda 명령은
+#    /apps/applications/Miniconda/<버전>/bin/conda 에 실제로 존재하므로
+#    그 base를 직접 source 한다 (module load 불필요).
+CONDA_BASE="${CONDA_BASE:-/apps/applications/Miniconda/25.11.1}"
+source "$CONDA_BASE/etc/profile.d/conda.sh"
 conda activate "$ENV_PREFIX"
 
 # 2) HuggingFace 캐시를 scratch 로 (home 쿼터 절약 + 재다운로드 방지)
@@ -63,8 +67,7 @@ python unimol_smoketest.py
 # 그리고 data_path에 실제 사전학습 데이터가 준비돼 있어야 함.
 #
 # module load cuda/12.1
-# module load conda/pytorch_2.9.1_cuda12
-# source "$(conda info --base)/etc/profile.d/conda.sh"
+# source /apps/applications/Miniconda/25.11.1/etc/profile.d/conda.sh
 # conda activate unimol
 # python -c "import unicore; print('unicore imported OK')"
 #
