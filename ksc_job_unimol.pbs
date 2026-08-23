@@ -50,7 +50,12 @@ HF_CACHE="${HF_CACHE:-/scratch/$USER/hf_cache}"
 #    그 base를 직접 source 한다 (module load 불필요).
 CONDA_BASE="${CONDA_BASE:-/apps/applications/Miniconda/25.11.1}"
 source "$CONDA_BASE/etc/profile.d/conda.sh"
+# conda의 activate.d 훅이 set -u에 안전하지 않은 경우가 있어
+# (2026-08-22 MolE에서 MKL_INTERFACE_LAYER: unbound variable 확인)
+# activate 호출 구간만 방어적으로 set -u 해제.
+set +u
 conda activate "$ENV_PREFIX"
+set -u
 
 # 2) HuggingFace 캐시를 scratch 로 (home 쿼터 절약 + 재다운로드 방지)
 export HF_HOME="${HF_CACHE}"
