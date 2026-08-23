@@ -135,3 +135,4 @@ unimol_smoketest_exp/
 *.pbs.e*
 *_smoketest.log
 *_pretrain.log
+PR/
