@@ -15,8 +15,20 @@
 #   source /apps/applications/Miniconda/25.11.1/etc/profile.d/conda.sh
 #   conda create -p /scratch/$USER/envs/unimol_tools python=3.10 -y
 #   conda activate /scratch/$USER/envs/unimol_tools
-#   pip install unimol_tools huggingface_hub torch
+#   pip install unimol_tools huggingface_hub
+#   # *** 버전 미지정 `pip install torch`는 최신 cu130 빌드를 받는데, 이 빌드는
+#   # compute capability 7.0(V100)용 커널이 빠져 있어 학습 중
+#   # "CUDA error: no kernel image is available for execution on the device"로
+#   # 죽는다 (2026-08-23 job 890322 실제 확인). V100은 cu121 빌드로 설치할 것.
+#   pip install torch --index-url https://download.pytorch.org/whl/cu121
 #   python -c "from unimol_tools import MolTrain"   # import만 되는지 로그인 노드에서 확인
+#
+#   # *** 이미 (A) 방식대로 만든 환경이 있고 torch가 cu130으로 깔려 있다면,
+#   # 환경을 새로 만들지 말고 torch만 재설치하면 된다 (KSC 로그인 노드에서):
+#   #   conda activate /scratch/$USER/envs/unimol_tools
+#   #   pip uninstall -y torch
+#   #   pip install torch --index-url https://download.pytorch.org/whl/cu121
+#   #   python -c "import torch; print(torch.__version__)"   # +cu121 인지 확인
 # =============================================================================
 #SBATCH --job-name=unimol_tools_smoketest
 #SBATCH --partition=cas_v100_2
@@ -62,6 +74,24 @@ export HF_HOME="${HF_CACHE}"
 
 # 3) GPU 인식 확인
 python -c "import torch; print('CUDA available:', torch.cuda.is_available(), torch.cuda.get_device_name(0) if torch.cuda.is_available() else '')"
+
+# 3-1) torch.cuda.is_available()==True 여도 실제 커널이 없는 빌드일 수 있다
+# (2026-08-23 job 890322 실제 확인: V100 CC 7.0인데 torch+cu130 빌드라 학습 중
+# "no kernel image is available for execution on the device"로 죽음).
+# 실제 CUDA 연산을 한 번 돌려서 죽으면 학습 들어가기 전에 미리 잡는다.
+python - <<'PY'
+import sys, torch
+try:
+    (torch.zeros(1, device="cuda") + 1).cpu()
+except Exception as e:
+    sys.exit(
+        "!!! torch가 이 GPU용 CUDA 커널을 갖고 있지 않습니다: "
+        f"{e}\n반드시 V100(CC 7.0)을 지원하는 빌드로 재설치하세요:\n"
+        "  pip uninstall -y torch && "
+        "pip install torch --index-url https://download.pytorch.org/whl/cu121"
+    )
+print("torch CUDA 커널 정상 동작 확인")
+PY
 
 # 4) 스모크 테스트 — 사전학습 가중치 HuggingFace 자동 다운로드 + 5-fold 학습 + AUC
 python unimol_smoketest.py
