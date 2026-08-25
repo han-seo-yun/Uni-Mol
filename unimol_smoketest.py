@@ -27,9 +27,12 @@ def main():
         metrics="auc",
         save_path="unimol_smoketest_exp",
     )
-    pred = clf.fit(data=csv_path)
+    # MolTrain.fit()은 예측값을 반환하지 않고(train.py: `return` only) None을
+    # 반환한다 (2026-08-24 job 891712 실제 확인: TypeError: 'NoneType' object
+    # is not subscriptable). 예측값은 clf.cv_pred에 저장돼 있다.
+    clf.fit(data=csv_path)
     print("=== SMOKETEST OK ===")
-    print(pred[:5])
+    print(clf.cv_pred[:5])
 
 
 if __name__ == "__main__":
